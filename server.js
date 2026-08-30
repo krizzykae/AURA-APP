@@ -97,7 +97,16 @@ if (!ACCESS_CODE) {
 
 app.set('trust proxy', true); // needed to get the real visitor IP behind Render/Railway/Vercel/Fly's proxy
 app.use(express.json({ limit: '15mb' })); // generous limit for image attachments
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  // index.html is the app shell — it must never be cached by the browser
+  // or any CDN in front of this, or updates won't reach returning visitors.
+  // Other static files (icons, manifest) can still cache normally.
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    }
+  }
+}));
 
 // Diagnostic-only endpoint: plain text, no caching, no service worker
 // involvement at all. Used to unambiguously confirm which deployment is

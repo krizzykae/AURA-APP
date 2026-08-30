@@ -4,10 +4,10 @@
 // because Gemini has a genuine, permanent free tier (no credit card,
 // no expiring trial), unlike Anthropic's API. This file does three
 // things:
-//   1. Serves public/index.html as a normal webpage.
+//   1. Serves webapp/index.html as a normal webpage.
 //   2. Proxies POST /api/messages to Google's Gemini API, attaching
 //      YOUR Gemini API key server-side (never exposed to the browser).
-//      The front-end (public/index.html) still builds its requests in
+//      The front-end (webapp/index.html) still builds its requests in
 //      Anthropic's Messages API shape (model, system, messages, etc.)
 //      unchanged — this file translates that shape to and from
 //      Gemini's request/response format, so nothing else in the app
@@ -44,7 +44,7 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 // --- Access code -----------------------------------------------------
 // If ACCESS_CODE is set, every /api/messages request must include a
 // matching "x-access-code" header. The public page asks the visitor for
-// this code once and remembers it in their browser (see public/index.html).
+// this code once and remembers it in their browser (see webapp/index.html).
 // This is NOT strong security — it's a shared password, visible to anyone
 // you give it to, and anyone determined enough could still poke at the
 // endpoint directly. It exists to stop *casual* drive-by usage by people
@@ -97,7 +97,7 @@ if (!ACCESS_CODE) {
 
 app.set('trust proxy', true); // needed to get the real visitor IP behind Render/Railway/Vercel/Fly's proxy
 app.use(express.json({ limit: '15mb' })); // generous limit for image attachments
-app.use(express.static(path.join(__dirname, 'public'), {
+app.use(express.static(path.join(__dirname, 'webapp'), {
   // index.html is the app shell — it must never be cached by the browser
   // or any CDN in front of this, or updates won't reach returning visitors.
   // Other static files (icons, manifest) can still cache normally.
@@ -123,7 +123,7 @@ app.get('/api/config', (req, res) => {
 });
 
 // --- Anthropic-shape <-> Gemini-shape translation -----------------------
-// The front-end (public/index.html) was originally built to talk to
+// The front-end (webapp/index.html) was originally built to talk to
 // Anthropic's Messages API, and still sends requests in that shape:
 //   { model, max_tokens, system, messages: [{role:'user'|'assistant', content}], tools? }
 // where `content` is either a plain string or an array of blocks like

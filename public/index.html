@@ -2,20 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="color-scheme" content="dark">
+<title>A.U.R.A.</title>
+<!-- PWA install support (standalone build only) -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#38e0ff">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AURA">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#050a10">
-<meta name="description" content="AURA — a personal AI assistant for daily planning, business strategy, and creative work.">
-<meta property="og:title" content="A.U.R.A.">
-<meta property="og:description" content="A personal AI assistant for daily planning, business strategy, and creative work.">
-<meta property="og:type" content="website">
-<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.json">
-<title>A.U.R.A.</title>
+<meta name="mobile-web-app-capable" content="yes">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
 
@@ -31,24 +29,21 @@
   --text:#dff4fb;
   --text-dim:#5f7d8c;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{html,body{margin:0;padding:0;height:100%;height:100dvh;background:var(--bg);overflow:hidden;}
-;background:var(--bg);overflow:hidden;overscroll-behavior:none;}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;height:100dvh;background:var(--bg);overflow:hidden;}
 body{
   font-family:'Inter',sans-serif;
   color:var(--text);
   display:flex;
   align-items:center;
   justify-content:center;
-  touch-action:manipulation;
 }
-.app{height:100dvh;
-height:100dvh;
-
+.app{
   position:relative;
   width:100%;
   max-width:480px;
   height:100vh;
+  height:100dvh; /* accounts for mobile browser toolbars so nothing gets cut off */
   max-height:920px;
   display:flex;
   flex-direction:column;
@@ -93,16 +88,15 @@ header .status b{color:var(--teal);font-weight:600;}
   transition:all .15s;
 }
 .gear-btn:hover{color:var(--cyan);border-color:var(--cyan-dim);}
-.gear-btn:active{transform:scale(0.9);}
 
 .settings-overlay{
   position:absolute;inset:0;z-index:20;background:rgba(2,6,10,0.72);backdrop-filter:blur(3px);
-  display:none;align-items:center;justify-content:center;padding:20px;
+  display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;
 }
 .settings-overlay.open{display:flex;}
 .settings-card{
-  width:100%;max-width:340px;background:#0a1622;border:1px solid var(--cyan-dim);border-radius:14px;
-  padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;
+  width:100%;max-width:340px;max-height:86vh;background:#0a1622;border:1px solid var(--cyan-dim);border-radius:14px;
+  padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px;
   box-shadow:0 0 30px rgba(56,224,255,0.08);
 }
 .settings-head{
@@ -111,22 +105,19 @@ header .status b{color:var(--teal);font-weight:600;}
 }
 .settings-x{cursor:pointer;color:var(--text-dim);font-size:13px;}
 .settings-x:hover{color:var(--amber);}
+.settings-tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:10px;flex:0 0 auto;}
+.settings-tab-btn{
+  flex:1;background:none;border:1px solid var(--cyan-dim);color:var(--text-dim);
+  border-radius:8px;padding:7px 4px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;
+  letter-spacing:0.5px;cursor:pointer;transition:all .15s;
+}
+.settings-tab-btn:hover{color:var(--cyan);}
+.settings-tab-btn.active{background:rgba(56,224,255,0.14);color:var(--cyan);border-color:var(--cyan);}
+.settings-tab-pane{display:none;flex-direction:column;gap:14px;overflow-y:auto;padding-right:2px;}
+.settings-tab-pane.active{display:flex;}
 .settings-row{
   display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text);
 }
-.settings-card-tabbed{max-height:82vh;}
-.settings-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:-2px;}
-.settings-tab{
-  flex:1;background:none;border:none;color:var(--text-dim);font-family:'Rajdhani',sans-serif;
-  font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:8px 4px 9px;cursor:pointer;
-  border-bottom:2px solid transparent;transition:all .15s;
-}
-.settings-tab:hover{color:var(--text);}
-.settings-tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
-.settings-tab-panel{display:flex;flex-direction:column;gap:14px;max-height:58vh;overflow-y:auto;padding-right:4px;}
-.settings-tab-panel[hidden]{display:none;}
-.settings-tab-panel::-webkit-scrollbar{width:4px;}
-.settings-tab-panel::-webkit-scrollbar-thumb{background:var(--cyan-dim);border-radius:2px;}
 .toggle{width:38px;height:21px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid var(--line);position:relative;cursor:pointer;flex:0 0 auto;transition:background .2s;}
 .toggle .knob{width:15px;height:15px;border-radius:50%;background:var(--text-dim);position:absolute;top:2px;left:2px;transition:all .2s;}
 .toggle.on{background:rgba(31,216,164,0.25);border-color:var(--teal);}
@@ -144,14 +135,7 @@ header .status b{color:var(--teal);font-weight:600;}
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:6px 0 2px;
 }
-.core-wrap{
-  position:relative;width:190px;height:190px;
-  touch-action:none;user-select:none;-webkit-user-select:none;
-  cursor:grab;
-  transition:transform .6s cubic-bezier(.22,1.6,.4,1);
-  will-change:transform;
-}
-.core-wrap.dragging{transition:none;cursor:grabbing;}
+.core-wrap{position:relative;width:190px;height:190px;}
 .core-wrap svg{position:absolute;inset:0;width:100%;height:100%;}
 .ring1{animation:spin 14s linear infinite;}
 .ring2{animation:spin 20s linear infinite reverse;}
@@ -242,7 +226,6 @@ header .status b{color:var(--teal);font-weight:600;}
 .agent-dot i{width:6px;height:6px;border-radius:50%;background:var(--text-dim);display:inline-block;transition:all .2s;}
 .agent-dot.active{color:var(--cyan);border-color:var(--cyan-dim);background:rgba(56,224,255,0.08);}
 .agent-dot.active i{background:var(--cyan);box-shadow:0 0 6px var(--cyan);}
-.agent-dot:active{transform:scale(0.94);}
 
 .panel{
   position:relative;z-index:2;flex:1;margin:12px 14px 0;
@@ -267,7 +250,7 @@ header .status b{color:var(--teal);font-weight:600;}
   padding:8px 12px;border-radius:8px;cursor:pointer;transition:all .15s;
 }
 .action-btn:hover{background:rgba(56,224,255,0.16);}
-.action-btn:active{transform:scale(0.96);background:rgba(56,224,255,0.22);}
+.action-btn:active{transform:scale(0.97);}
 
 .msg{max-width:88%;padding:9px 12px;border-radius:10px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;}
 .msg.user{align-self:flex-end;background:rgba(56,224,255,0.12);border:1px solid var(--cyan-dim);}
@@ -326,7 +309,7 @@ header .status b{color:var(--teal);font-weight:600;}
 
 footer{
   position:relative;z-index:2;display:flex;gap:8px;align-items:center;
-  padding:12px 14px 16px;
+  padding:12px calc(14px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
 }
 footer .mic{
   width:42px;height:42px;flex:0 0 auto;border-radius:50%;
@@ -334,7 +317,6 @@ footer .mic{
   font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;
 }
 footer .mic.on{background:var(--cyan);color:#04141a;box-shadow:0 0 14px var(--cyan);}
-footer .mic:active, footer .send:active, footer .plus:active{transform:scale(0.9);}
 footer input[type=text]{
   flex:1;background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:10px;
   color:var(--text);padding:11px 13px;font-size:13.5px;font-family:'Inter',sans-serif;
@@ -364,9 +346,39 @@ footer .plus{
 }
 
 .hint{font-size:10px;color:var(--text-dim);text-align:center;padding-bottom:2px;letter-spacing:0.5px;}
+
+.install-banner{
+  display:none;align-items:center;gap:10px;
+  margin:0 14px 8px;padding:10px 12px;border-radius:10px;
+  background:rgba(56,224,255,0.08);border:1px solid rgba(56,224,255,0.3);
+  font-size:12px;color:var(--text-dim);
+}
+.install-banner.show{display:flex;}
+.install-banner .icon{font-size:18px;flex:0 0 auto;}
+.install-banner .body{flex:1;line-height:1.4;}
+.install-banner .body b{color:var(--cyan);}
+.install-banner button.install-go{
+  flex:0 0 auto;background:var(--cyan);color:#04141c;border:none;border-radius:8px;
+  padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer;
+}
+.install-banner button.install-dismiss{
+  flex:0 0 auto;background:none;border:none;color:var(--text-dim);font-size:14px;cursor:pointer;padding:2px 4px;
+}
 </style>
 </head>
 <body>
+
+<div id="accessGate" style="display:none;position:fixed;inset:0;z-index:9999;background:#050c12;color:#e8f6fa;
+  display:none;align-items:center;justify-content:center;padding:24px;font-family:inherit;">
+  <div style="max-width:360px;width:100%;background:#0a1520;border:1px solid #1c3a45;border-radius:14px;padding:28px 24px;">
+    <div style="font-size:15px;font-weight:700;letter-spacing:0.02em;margin-bottom:8px;">Access code required</div>
+    <div style="font-size:13px;color:#9fb8c2;margin-bottom:18px;line-height:1.5;">This app is invite-only. Enter the access code you were given to continue.</div>
+    <input id="accessGateInput" type="password" placeholder="Access code" autocomplete="off"
+      style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #1c3a45;background:#050c12;color:#e8f6fa;font-size:14px;margin-bottom:10px;">
+    <div id="accessGateError" style="display:none;color:#ff6b6b;font-size:12px;margin-bottom:10px;"></div>
+    <button id="accessGateSubmit" style="width:100%;padding:10px;border:none;border-radius:8px;background:#38e0ff;color:#04141c;font-weight:700;font-size:14px;cursor:pointer;">Continue</button>
+  </div>
+</div>
 
 <div class="app">
   <div class="grid-bg"></div>
@@ -381,19 +393,19 @@ footer .plus{
   </header>
 
   <div class="settings-overlay" id="settingsOverlay">
-    <div class="settings-card settings-card-tabbed">
+    <div class="settings-card">
       <div class="settings-head">
         <span>Settings</span>
         <span id="settingsClose" class="settings-x">✕</span>
       </div>
 
-      <div class="settings-tabs" id="settingsTabs">
-        <button type="button" class="settings-tab active" data-settings-tab="voice">Voice</button>
-        <button type="button" class="settings-tab" data-settings-tab="subscription">Subscription</button>
-        <button type="button" class="settings-tab" data-settings-tab="about">About</button>
+      <div class="settings-tabs">
+        <button class="settings-tab-btn active" data-settings-tab="voice">Voice</button>
+        <button class="settings-tab-btn" data-settings-tab="subscription">Subscription</button>
+        <button class="settings-tab-btn" data-settings-tab="about">About</button>
       </div>
 
-      <div class="settings-tab-panel" data-settings-panel="voice">
+      <div class="settings-tab-pane active" data-pane="voice">
         <div class="settings-row">
           <span>AURA speaks replies aloud</span>
           <div class="toggle" id="speechToggle"><div class="knob"></div></div>
@@ -429,7 +441,7 @@ footer .plus{
         </div>
       </div>
 
-      <div class="settings-tab-panel" data-settings-panel="subscription" hidden>
+      <div class="settings-tab-pane" data-pane="subscription">
         <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
           <span id="trialStatusText">Checking your plan…</span>
           <div class="action-row">
@@ -446,7 +458,7 @@ footer .plus{
         </div>
       </div>
 
-      <div class="settings-tab-panel" data-settings-panel="about" hidden>
+      <div class="settings-tab-pane" data-pane="about">
         <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
           <span style="font-size:12px;color:var(--text-dim);line-height:1.5;">
             AURA is a personal AI assistant with four focused agents — <b>Today</b> for daily planning and tasks, <b>Business</b> for concrete strategy and numbers, <b>Creative</b> for ideas and building things (including live websites), and <b>Memory</b> for what it should remember about you. Every reply comes from a real AI model, grounded in your actual open tasks, the current time, anything you've asked it to remember, and any files or photos you attach. It has genuine live web search for current information, and can build and preview real, downloadable websites on request. Say "hey AURA" any time to wake it, or type or tap the mic. Tasks, memory notes, and voice settings are saved to your account and carry over between visits.
@@ -491,6 +503,13 @@ footer .plus{
     <div id="thread" style="display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 
+  <div class="install-banner" id="installBanner">
+    <span class="icon">📲</span>
+    <span class="body" id="installBannerText">Install AURA for the full-screen app experience.</span>
+    <button class="install-go" id="installGoBtn" style="display:none;">Install</button>
+    <button class="install-dismiss" id="installDismissBtn" title="Dismiss">✕</button>
+  </div>
+
   <div class="hint" id="hint">Say "hey Aura" or tap the mic / type below</div>
   <div class="composer-attachments" id="composerAttachments"></div>
   <footer>
@@ -506,13 +525,74 @@ footer .plus{
 
 <script>
 // =====================================================================
-// DEPLOYMENT CONFIG — AURA is its own platform now. This relative path
-// is served by server.js (see /server.js and /README.md in this project),
-// which holds the real Anthropic API key server-side and forwards
-// requests on the app's behalf. Never put a real API key directly in
-// this file — it's shipped to every visitor's browser.
+// DEPLOYMENT CONFIG — this is the ONE line to change for a standalone
+// deployment outside Claude. Inside Claude's artifact viewer, leave this
+// as-is; it's specially intercepted and authorized with no key needed.
+// Outside Claude, point it at your own backend proxy (see server.js),
+// e.g. "/api/messages" — never put a real API key directly in this file.
 // =====================================================================
 const AURA_API_ENDPOINT = "/api/messages";
+
+// --- Access code gate --------------------------------------------------
+// Some standalone deployments require a shared access code (set via
+// ACCESS_CODE on the server) before the chat backend will respond. This
+// checks whether that's the case, and if so, blocks the UI behind a
+// simple prompt until a code is entered. The code itself is just stored
+// in this browser's localStorage and sent as a header on each request —
+// it's a shared password, not strong auth (see server.js for details).
+function getStoredAccessCode(){
+  try{ return localStorage.getItem('aura_access_code') || ''; }catch(_){ return ''; }
+}
+function setStoredAccessCode(code){
+  try{ localStorage.setItem('aura_access_code', code); }catch(_){ /* ignore */ }
+}
+async function ensureAccessGate(){
+  let required = false;
+  try{
+    const res = await fetch('/api/config');
+    if(res.ok){ const data = await res.json(); required = !!data.accessCodeRequired; }
+  }catch(_){ /* if this fails, fall through and let the app try anyway */ }
+
+  if(!required) return;
+
+  const gate = document.getElementById('accessGate');
+  const input = document.getElementById('accessGateInput');
+  const submitBtn = document.getElementById('accessGateSubmit');
+  const errEl = document.getElementById('accessGateError');
+
+  const existing = getStoredAccessCode();
+  if(existing){
+    // We have a stored code from before; let the app proceed and rely on
+    // callAuraAPI's 401 handling to re-show this gate if it's wrong/stale.
+    return;
+  }
+
+  return new Promise((resolve) => {
+    gate.style.display = 'flex';
+    function submit(){
+      const val = input.value.trim();
+      if(!val){ return; }
+      setStoredAccessCode(val);
+      gate.style.display = 'none';
+      resolve();
+    }
+    submitBtn.addEventListener('click', submit);
+    input.addEventListener('keydown', (e) => { if(e.key === 'Enter') submit(); });
+    input.focus();
+  });
+}
+// Called from callAuraAPI when the server rejects the stored code.
+function showAccessGateError(message){
+  const gate = document.getElementById('accessGate');
+  const errEl = document.getElementById('accessGateError');
+  const input = document.getElementById('accessGateInput');
+  setStoredAccessCode('');
+  errEl.textContent = message || 'That code was not accepted — try again.';
+  errEl.style.display = 'block';
+  input.value = '';
+  gate.style.display = 'flex';
+  input.focus();
+}
 
 // Outside Claude, window.storage doesn't exist at all. This shim gives it
 // the same async get/set/delete/list interface backed by localStorage, so
@@ -939,57 +1019,6 @@ function setCore(state){
   else { coreState.textContent='READY'; statusWord.textContent='READY'; }
 }
 
-// ---------- draggable holographic core ----------
-// Lets the user physically drag the orb around within a small radius of its
-// home position — pure visual play, no functional meaning. Uses Pointer
-// Events so it works identically for touch, mouse, and pen. Snaps back to
-// center with a spring-like easing curve on release.
-(function initCoreDrag(){
-  const wrap = document.getElementById('coreWrap');
-  if(!wrap) return;
-  const MAX_DRAG = 44; // px of play in any direction
-  let dragging = false, pointerId = null;
-  let startX = 0, startY = 0, curX = 0, curY = 0;
-
-  function clamp(v){ return Math.max(-MAX_DRAG, Math.min(MAX_DRAG, v)); }
-  function applyTransform(x, y, scale){
-    wrap.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
-  }
-
-  function onPointerDown(e){
-    dragging = true;
-    pointerId = e.pointerId;
-    wrap.classList.add('dragging');
-    startX = e.clientX - curX;
-    startY = e.clientY - curY;
-    try{ wrap.setPointerCapture(pointerId); }catch(err){ /* ignore */ }
-  }
-  function onPointerMove(e){
-    if(!dragging || e.pointerId !== pointerId) return;
-    curX = clamp(e.clientX - startX);
-    curY = clamp(e.clientY - startY);
-    applyTransform(curX, curY, 1.04);
-  }
-  function endDrag(e){
-    if(!dragging || (e && e.pointerId !== pointerId)) return;
-    dragging = false;
-    wrap.classList.remove('dragging');
-    curX = 0; curY = 0;
-    applyTransform(0, 0, 1);
-  }
-  wrap.addEventListener('pointerdown', onPointerDown);
-  wrap.addEventListener('pointermove', onPointerMove);
-  wrap.addEventListener('pointerup', endDrag);
-  wrap.addEventListener('pointercancel', endDrag);
-  wrap.addEventListener('lostpointercapture', endDrag);
-})();
-
-// iOS Safari only honors CSS :active states on elements once *some* touch
-// listener exists on the page — this is a long-standing WebKit quirk, not a
-// bug in this app. A single no-op listener unlocks :active (press feedback)
-// for every button and tab throughout the whole UI.
-document.addEventListener('touchstart', function(){}, {passive:true});
-
 // ---------- tabs ----------
 document.querySelectorAll('.agent-dot').forEach(el=>{
   el.addEventListener('click', ()=>{
@@ -1127,11 +1156,6 @@ function renderThread(){
         <div style="margin-top:10px;">
           <button class="action-btn" data-upgrade-idx="${i}">Upgrade to Premium</button>
         </div>`;
-    } else if(m.retry){
-      div.innerHTML = `<span class="who">AURA</span>${escapeHtml(m.text)}
-        <div style="margin-top:10px;">
-          <button class="action-btn" data-retry-idx="${i}">↻ Retry</button>
-        </div>`;
     } else if(m.html){
       div.innerHTML = `<span class="who">AURA</span>${escapeHtml(m.text)}
         <div class="preview-slot" data-slot-idx="${i}" style="margin-top:10px;border:1px solid rgba(56,224,255,0.35);border-radius:10px;overflow:hidden;"></div>
@@ -1182,13 +1206,6 @@ function renderThread(){
   thread.querySelectorAll('[data-upgrade-idx]').forEach(btn=>{
     btn.addEventListener('click', handleUpgradeClick);
   });
-  thread.querySelectorAll('[data-retry-idx]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const idx = Number(btn.getAttribute('data-retry-idx'));
-      const msg = conversation.filter(m=>m.tab===currentTab)[idx];
-      if(msg && msg.retryText) sendMessage(msg.retryText);
-    });
-  });
   thread.scrollTop = thread.scrollHeight;
   panel.scrollTop = panel.scrollHeight;
 }
@@ -1216,17 +1233,34 @@ const WAKE_GREETINGS = [
 // Calls the reasoning core with automatic retries. Some environments occasionally
 // choke on .json()'s charset sniffing or hit a transient empty-body race, so this
 // falls back to .text()+JSON.parse on the same response, and retries the whole
-// request a couple of times before giving up.
-async function callAuraAPI(payload, maxAttempts=4){
+// request a couple of times before giving up. The backend returns typed error
+// bodies ({error, message}) for missing-key, timeout, rate-limit, and malformed-
+// reply cases — this surfaces those as clear, specific messages instead of a
+// generic failure, and skips retrying when retrying can't possibly help.
+async function callAuraAPI(payload, maxAttempts=3){
   let lastErr;
   for(let attempt=1; attempt<=maxAttempts; attempt++){
     try{
+      const storedCode = getStoredAccessCode();
       const response = await fetch(AURA_API_ENDPOINT, {
         method:"POST",
-        headers:{ "Content-Type":"application/json" },
+        headers: storedCode
+          ? { "Content-Type":"application/json", "x-access-code": storedCode }
+          : { "Content-Type":"application/json" },
         body: JSON.stringify(payload)
       });
       if(!response.ok){
+        let errBody = null;
+        try{ errBody = await response.json(); }catch(_){ /* not JSON — fall through below */ }
+        if(errBody && errBody.error === 'invalid_access_code'){
+          showAccessGateError(errBody.message);
+        }
+        if(errBody && errBody.error && errBody.message){
+          throw Object.assign(new Error(errBody.message), {
+            auraStep: errBody.error,
+            auraNoRetry: errBody.error === 'missing_api_key' || errBody.error === 'invalid_access_code'
+          });
+        }
         let bodyText = '';
         try{ bodyText = await response.text(); }catch(_){ /* ignore */ }
         throw Object.assign(new Error(`Server responded with status ${response.status}${bodyText ? ' — ' + bodyText.slice(0,200) : ''}`), {auraStep:'checking response status'});
@@ -1243,6 +1277,7 @@ async function callAuraAPI(payload, maxAttempts=4){
       }
     }catch(err){
       lastErr = err;
+      if(err.auraNoRetry) break; // e.g. missing API key — retrying won't fix it
       if(attempt < maxAttempts){
         await new Promise(r=>setTimeout(r, 400*attempt));
         continue;
@@ -1439,14 +1474,18 @@ async function sendMessage(text){
   }catch(e){
     if(placeholder) placeholder.remove();
     const failedStep = e.auraStep || step;
-    const detail = e.name === 'AbortError' ? 'the request timed out' : (e.message || 'an unknown error');
-    conversation.push({
-      tab:currentTab,
-      role:'aura',
-      text:`I hit a snag reaching my reasoning core just now (${detail}) — that's almost always a brief hiccup on the connection, not something wrong with your message.`,
-      retry:true,
-      retryText: trimmed
-    });
+    const READABLE_ERRORS = {
+      missing_api_key: "AURA can't reach its AI backend because the server is missing its API key. Whoever's running this needs to add ANTHROPIC_API_KEY (as a Replit Secret or in .env).",
+      timeout: "That request took too long and timed out. The AI provider may be slow right now — try again in a moment.",
+      rate_limited: "AURA is being rate-limited by the AI provider right now. Wait a few seconds and try again.",
+      malformed_reply: "AURA got back an unreadable response from the AI provider. This is usually temporary — try again.",
+      upstream_error: e.message || "The AI provider rejected the request.",
+      network_error: "Couldn't reach the server at all — check that it's actually running and reachable.",
+      'checking response status': `Server responded unexpectedly: ${e.message || 'unknown error'}`,
+      'parsing JSON response': "Got a response back but couldn't read it as valid data. Try again."
+    };
+    const readableMessage = READABLE_ERRORS[failedStep] || `Something went wrong (${failedStep}): ${e.message || 'unknown error'}. Try again in a moment.`;
+    conversation.push({tab:currentTab, role:'aura', text:readableMessage});
     renderThread();
     console.error('AURA request failed at step:', failedStep, e, e && e.stack);
   }
@@ -1504,6 +1543,8 @@ Keep every field concrete and short. steps should be exactly 4 short action item
 const settingsOverlay = document.getElementById('settingsOverlay');
 document.getElementById('settingsBtn').addEventListener('click', ()=>{
   settingsOverlay.classList.add('open');
+  document.querySelectorAll('.settings-tab-btn').forEach(b=>b.classList.toggle('active', b.getAttribute('data-settings-tab')==='voice'));
+  document.querySelectorAll('.settings-tab-pane').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')==='voice'));
   renderVoiceSelect();
   renderAttitudeSelect();
   document.getElementById('speechToggle').classList.toggle('on', speechEnabled);
@@ -1518,14 +1559,11 @@ document.getElementById('settingsBtn').addEventListener('click', ()=>{
 document.getElementById('settingsClose').addEventListener('click', ()=> settingsOverlay.classList.remove('open'));
 settingsOverlay.addEventListener('click', (e)=>{ if(e.target===settingsOverlay) settingsOverlay.classList.remove('open'); });
 
-document.querySelectorAll('.settings-tab').forEach(btn=>{
+document.querySelectorAll('.settings-tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.settings-tab').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const target = btn.dataset.settingsTab;
-    document.querySelectorAll('.settings-tab-panel').forEach(p=>{
-      p.hidden = p.dataset.settingsPanel !== target;
-    });
+    const target = btn.getAttribute('data-settings-tab');
+    document.querySelectorAll('.settings-tab-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.settings-tab-pane').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')===target));
   });
 });
 
@@ -1603,6 +1641,7 @@ document.addEventListener('keydown', e => {
 
 // ---------- boot ----------
 (async function boot(){
+  await ensureAccessGate();
   await loadMemory();
   await loadTasks();
   await loadVoicePref();
@@ -1630,6 +1669,89 @@ document.addEventListener('keydown', e => {
   conversation.push({tab:'today', role:'aura', text:greetingShown});
   renderThread();
   try{ speak(greetingSpoken); }catch(e){ /* speech synthesis unavailable — non-critical */ }
+})();
+
+// PWA install support — registers the service worker only when this file is
+// actually hosted (http/https), never inside Claude's srcdoc sandbox, and
+// never breaks anything if the browser doesn't support it.
+if('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{ /* non-critical */ });
+  });
+}
+
+// ---------------- Home Screen install banner ----------------
+// Android/Chrome genuinely supports a programmatic install prompt via the
+// beforeinstallprompt event — we capture it and offer a real "Install" button.
+// iOS Safari has NO equivalent API at all (Apple doesn't expose one), so for
+// iOS this can only ever be step-by-step instructions, never a one-tap button.
+// This whole feature is a no-op inside Claude's sandbox (no real install target
+// there), and quietly does nothing if the browser doesn't support any of it.
+(function initInstallBanner(){
+  const banner = document.getElementById('installBanner');
+  const textEl = document.getElementById('installBannerText');
+  const goBtn = document.getElementById('installGoBtn');
+  const dismissBtn = document.getElementById('installDismissBtn');
+  if(!banner || !textEl || !goBtn || !dismissBtn) return;
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if(isStandalone) return; // already installed — never nag
+
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  const isAndroid = /Android/.test(ua);
+  let deferredPrompt = null;
+  const DISMISS_KEY = 'aura:installBannerDismissedAt';
+  const DISMISS_DAYS = 14;
+
+  async function wasRecentlyDismissed(){
+    try{
+      const res = await window.storage.get(DISMISS_KEY, false);
+      if(res && res.value){
+        const dismissedAt = Number(res.value);
+        return (Date.now() - dismissedAt) < DISMISS_DAYS * 86400000;
+      }
+    }catch(e){ /* never dismissed */ }
+    return false;
+  }
+  async function markDismissed(){
+    try{ await window.storage.set(DISMISS_KEY, String(Date.now()), false); }catch(e){}
+  }
+
+  dismissBtn.addEventListener('click', ()=>{
+    banner.classList.remove('show');
+    markDismissed();
+  });
+
+  // Android/Chrome (and other Chromium browsers): real, one-tap install.
+  window.addEventListener('beforeinstallprompt', async (e)=>{
+    e.preventDefault();
+    deferredPrompt = e;
+    if(await wasRecentlyDismissed()) return;
+    textEl.innerHTML = '<b>Install AURA</b> for a full-screen app, right on your home screen.';
+    goBtn.style.display = '';
+    banner.classList.add('show');
+  });
+  goBtn.addEventListener('click', async ()=>{
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice.catch(()=>{});
+    deferredPrompt = null;
+    banner.classList.remove('show');
+  });
+  window.addEventListener('appinstalled', ()=>{
+    banner.classList.remove('show');
+  });
+
+  // iOS Safari: no install API exists, so this is instructions only.
+  if(isIOS){
+    (async ()=>{
+      if(await wasRecentlyDismissed()) return;
+      textEl.innerHTML = 'Tap <b>Share ⬆</b>, then <b>Add to Home Screen</b> to install AURA.';
+      goBtn.style.display = 'none';
+      banner.classList.add('show');
+    })();
+  }
 })();
 </script>
 </body>

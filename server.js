@@ -99,6 +99,14 @@ app.set('trust proxy', true); // needed to get the real visitor IP behind Render
 app.use(express.json({ limit: '15mb' })); // generous limit for image attachments
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Diagnostic-only endpoint: plain text, no caching, no service worker
+// involvement at all. Used to unambiguously confirm which deployment is
+// actually being served when troubleshooting stale-content issues.
+app.get('/api/whoami', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.type('text/plain').send('AURA gemini-backend build — ' + new Date().toISOString());
+});
+
 // Lets the public page know whether it needs to show an access-code
 // prompt at all — never reveals the actual code.
 app.get('/api/config', (req, res) => {

@@ -380,22 +380,6 @@ footer .plus{
   </div>
 </div>
 
-<div id="apiKeyGate" style="display:none;position:fixed;inset:0;z-index:9998;background:#050c12;color:#e8f6fa;
-  align-items:center;justify-content:center;padding:24px;font-family:inherit;">
-  <div style="max-width:400px;width:100%;background:#0a1520;border:1px solid #1c3a45;border-radius:14px;padding:28px 24px;">
-    <div style="font-size:15px;font-weight:700;letter-spacing:0.02em;margin-bottom:8px;">Your Anthropic API key</div>
-    <div style="font-size:13px;color:#9fb8c2;margin-bottom:14px;line-height:1.5;">
-      AURA runs on your own Anthropic account, so your usage is billed to you, not the person who shared this app.
-      Get a key at <span style="color:#38e0ff;">console.anthropic.com/settings/keys</span> (starts with <code>sk-ant-</code>),
-      then paste it below. It's stored only in this browser and sent directly with your requests — never saved on any server.
-    </div>
-    <input id="apiKeyGateInput" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"
-      style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #1c3a45;background:#050c12;color:#e8f6fa;font-size:13px;margin-bottom:10px;font-family:monospace;">
-    <div id="apiKeyGateError" style="display:none;color:#ff6b6b;font-size:12px;margin-bottom:10px;"></div>
-    <button id="apiKeyGateSubmit" style="width:100%;padding:10px;border:none;border-radius:8px;background:#38e0ff;color:#04141c;font-weight:700;font-size:14px;cursor:pointer;">Continue</button>
-  </div>
-</div>
-
 <div class="app">
   <div class="grid-bg"></div>
   <div class="scanline"></div>
@@ -485,9 +469,6 @@ footer .plus{
           <span style="font-size:12px;color:var(--text-dim);">
             Created by <b>Kaylem K. Christy</b>, a.k.a. <b>"Krizzy Kae."</b>
           </span>
-          <button id="changeApiKeyBtn" type="button" style="align-self:stretch;padding:9px 10px;border-radius:8px;border:1px solid var(--cyan-dim);background:rgba(56,224,255,0.07);color:var(--cyan);font-size:12.5px;cursor:pointer;">
-            Change my Anthropic API key
-          </button>
           <span style="font-size:11px;color:var(--text-dim);">Build 7</span>
         </div>
       </div>
@@ -607,62 +588,6 @@ function showAccessGateError(message){
   const input = document.getElementById('accessGateInput');
   setStoredAccessCode('');
   errEl.textContent = message || 'That code was not accepted — try again.';
-  errEl.style.display = 'block';
-  input.value = '';
-  gate.style.display = 'flex';
-  input.focus();
-}
-
-// --- Per-user Anthropic API key -----------------------------------------
-// This standalone deployment doesn't bill a shared key on the server —
-// each visitor supplies their OWN Anthropic API key, which is stored only
-// in their own browser's localStorage and sent as a header on every
-// request. The server (see server.js) just relays it through to Anthropic
-// and never stores it. This means your usage is billed to your own
-// Anthropic account, not whoever is hosting this page.
-function getStoredUserApiKey(){
-  try{ return localStorage.getItem('aura_user_api_key') || ''; }catch(_){ return ''; }
-}
-function setStoredUserApiKey(key){
-  try{ localStorage.setItem('aura_user_api_key', key); }catch(_){ /* ignore */ }
-}
-function ensureApiKeyGate(){
-  const existing = getStoredUserApiKey();
-  if(existing) return Promise.resolve();
-
-  const gate = document.getElementById('apiKeyGate');
-  const input = document.getElementById('apiKeyGateInput');
-  const submitBtn = document.getElementById('apiKeyGateSubmit');
-  const errEl = document.getElementById('apiKeyGateError');
-
-  return new Promise((resolve) => {
-    gate.style.display = 'flex';
-    function submit(){
-      const val = input.value.trim();
-      if(!val){ return; }
-      if(!val.startsWith('sk-ant-')){
-        errEl.textContent = 'That doesn\'t look like an Anthropic API key — it should start with "sk-ant-".';
-        errEl.style.display = 'block';
-        return;
-      }
-      setStoredUserApiKey(val);
-      gate.style.display = 'none';
-      resolve();
-    }
-    submitBtn.addEventListener('click', submit);
-    input.addEventListener('keydown', (e) => { if(e.key === 'Enter') submit(); });
-    input.focus();
-  });
-}
-// Called from callAuraAPI when the server rejects the stored key (e.g.
-// invalid or out of credits) so the visitor can fix it without digging
-// through a settings menu.
-function showApiKeyGateError(message){
-  const gate = document.getElementById('apiKeyGate');
-  const errEl = document.getElementById('apiKeyGateError');
-  const input = document.getElementById('apiKeyGateInput');
-  setStoredUserApiKey('');
-  errEl.textContent = message || 'That API key was not accepted — check it and try again.';
   errEl.style.display = 'block';
   input.value = '';
   gate.style.display = 'flex';
@@ -1317,10 +1242,8 @@ async function callAuraAPI(payload, maxAttempts=3){
   for(let attempt=1; attempt<=maxAttempts; attempt++){
     try{
       const storedCode = getStoredAccessCode();
-      const storedApiKey = getStoredUserApiKey();
       const headers = { "Content-Type":"application/json" };
       if(storedCode) headers["x-access-code"] = storedCode;
-      if(storedApiKey) headers["x-user-api-key"] = storedApiKey;
       const response = await fetch(AURA_API_ENDPOINT, {
         method:"POST",
         headers,
@@ -1332,16 +1255,10 @@ async function callAuraAPI(payload, maxAttempts=3){
         if(errBody && errBody.error === 'invalid_access_code'){
           showAccessGateError(errBody.message);
         }
-        // missing_api_key = we sent no key at all; a 401 upstream_error means
-        // Anthropic itself rejected the key the visitor entered (bad key, no
-        // credits, etc.) — both send them back to the API key prompt.
-        if(errBody && (errBody.error === 'missing_api_key' || (errBody.error === 'upstream_error' && response.status === 401))){
-          showApiKeyGateError(errBody.message);
-        }
         if(errBody && errBody.error && errBody.message){
           throw Object.assign(new Error(errBody.message), {
             auraStep: errBody.error,
-            auraNoRetry: errBody.error === 'missing_api_key' || errBody.error === 'invalid_access_code' || response.status === 401
+            auraNoRetry: errBody.error === 'missing_api_key' || errBody.error === 'invalid_access_code'
           });
         }
         let bodyText = '';
@@ -1558,7 +1475,7 @@ async function sendMessage(text){
     if(placeholder) placeholder.remove();
     const failedStep = e.auraStep || step;
     const READABLE_ERRORS = {
-      missing_api_key: e.message || "AURA needs your Anthropic API key. Tap the gear icon, then \"Change my Anthropic API key\" in About, to enter one.",
+      missing_api_key: e.message || "AURA can't reach its AI backend — whoever's hosting this needs to set a GEMINI_API_KEY environment variable (a free key from aistudio.google.com/apikey).",
       timeout: "That request took too long and timed out. The AI provider may be slow right now — try again in a moment.",
       rate_limited: "AURA is being rate-limited by the AI provider right now. Wait a few seconds and try again.",
       malformed_reply: "AURA got back an unreadable response from the AI provider. This is usually temporary — try again.",
@@ -1725,16 +1642,6 @@ document.addEventListener('keydown', e => {
 // ---------- boot ----------
 (async function boot(){
   await ensureAccessGate();
-  await ensureApiKeyGate();
-  const changeApiKeyBtn = document.getElementById('changeApiKeyBtn');
-  if(changeApiKeyBtn){
-    changeApiKeyBtn.addEventListener('click', () => {
-      setStoredUserApiKey('');
-      const overlay = document.getElementById('settingsOverlay');
-      if(overlay) overlay.style.display = 'none';
-      ensureApiKeyGate();
-    });
-  }
   await loadMemory();
   await loadTasks();
   await loadVoicePref();

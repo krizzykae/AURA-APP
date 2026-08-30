@@ -3,21 +3,24 @@
 // This is the piece that makes AURA work outside Claude. It does three
 // things:
 //   1. Serves public/index.html as a static page.
-//   2. Proxies POST /api/messages to Anthropic's real API, attaching
-//      YOUR real API key server-side — the key never reaches the
-//      browser, so it can't be stolen by anyone opening the page.
-//   3. Gates that proxy behind a shared access code and a per-visitor
-//      rate limit, so opening this to the public doesn't mean strangers
-//      can run up unlimited charges on your API key.
+//   2. Proxies POST /api/messages to Anthropic's real API, using the
+//      Anthropic API key that EACH VISITOR supplies themselves (entered
+//      once in the app, stored only in their own browser). The server
+//      never stores anyone's key — it just relays it through, per
+//      request, so nobody's key is exposed to the other visitors and
+//      you (the person hosting this) never pay for anyone else's usage.
+//   3. Gates that proxy behind an optional shared access code and a
+//      per-visitor rate limit, in case you want to control who can even
+//      reach the page at all.
 //
 // Setup:
 //   1. npm install
-//   2. Copy .env.example to .env and paste in your real Anthropic API
-//      key (get one at https://console.anthropic.com/settings/keys)
+//   2. Copy .env.example to .env (optional — see below)
 //   3. Optionally set ACCESS_CODE, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MIN
 //      in .env (see .env.example for what each does)
 //   4. npm start
-//   5. Open http://localhost:3000
+//   5. Open http://localhost:3000 — each visitor (including you) will
+//      be asked to paste their own Anthropic API key on first use.
 //
 // Requires Node.js 18+ (for the built-in global fetch).
 //
@@ -32,7 +35,6 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.ANTHROPIC_API_KEY;
 
 // --- Access code -----------------------------------------------------
 // If ACCESS_CODE is set, every /api/messages request must include a
@@ -78,11 +80,8 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000).unref();
 
-if (!API_KEY) {
-  console.warn('\n⚠️  ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your real key, or AURA\'s AI replies will fail.\n');
-}
 if (!ACCESS_CODE) {
-  console.warn('\n⚠️  ACCESS_CODE is not set. The public chat endpoint is open to anyone who finds this URL, with only the rate limit protecting your API bill. Set ACCESS_CODE in .env to require a shared password.\n');
+  console.warn('\n⚠️  ACCESS_CODE is not set. The public chat endpoint is open to anyone who finds this URL, with only the rate limit protecting against abuse. Set ACCESS_CODE in .env to require a shared password.\n');
 }
 
 app.set('trust proxy', true); // needed to get the real visitor IP behind Render/Railway/Fly's proxy
@@ -96,10 +95,13 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/api/messages', async (req, res) => {
-  if (!API_KEY) {
-    return res.status(500).json({
+  // Each visitor supplies their own Anthropic API key, sent as a header
+  // from their own browser (never stored server-side — see public/index.html).
+  const userApiKey = req.get('x-user-api-key') || '';
+  if (!userApiKey) {
+    return res.status(400).json({
       error: 'missing_api_key',
-      message: 'Server is missing ANTHROPIC_API_KEY. On Replit, add it under Secrets; locally, put it in .env. See .env.example.'
+      message: 'No Anthropic API key was provided. Enter your own API key in AURA\'s settings to use it.'
     });
   }
 
@@ -130,7 +132,7 @@ app.post('/api/messages', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
+        'x-api-key': userApiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify(req.body),

@@ -1,31 +1,34 @@
 // AURA standalone backend
 // -------------------------------------------------------------------
-// This is the piece that makes AURA work outside Claude. It does three
+// This runs AURA outside Claude, on Google's Gemini API — chosen
+// because Gemini has a genuine, permanent free tier (no credit card,
+// no expiring trial), unlike Anthropic's API. This file does three
 // things:
-//   1. Serves public/index.html as a static page.
-//   2. Proxies POST /api/messages to Anthropic's real API, using the
-//      Anthropic API key that EACH VISITOR supplies themselves (entered
-//      once in the app, stored only in their own browser). The server
-//      never stores anyone's key — it just relays it through, per
-//      request, so nobody's key is exposed to the other visitors and
-//      you (the person hosting this) never pay for anyone else's usage.
+//   1. Serves public/index.html as a normal webpage.
+//   2. Proxies POST /api/messages to Google's Gemini API, attaching
+//      YOUR Gemini API key server-side (never exposed to the browser).
+//      The front-end (public/index.html) still builds its requests in
+//      Anthropic's Messages API shape (model, system, messages, etc.)
+//      unchanged — this file translates that shape to and from
+//      Gemini's request/response format, so nothing else in the app
+//      needed to be rewritten.
 //   3. Gates that proxy behind an optional shared access code and a
-//      per-visitor rate limit, in case you want to control who can even
-//      reach the page at all.
+//      per-visitor rate limit, so opening this to the public doesn't
+//      mean strangers can burn through your daily Gemini quota alone.
 //
 // Setup:
 //   1. npm install
-//   2. Copy .env.example to .env (optional — see below)
+//   2. Copy .env.example to .env and paste in a real Gemini API key —
+//      get one free, no card required, at https://aistudio.google.com/apikey
 //   3. Optionally set ACCESS_CODE, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MIN
 //      in .env (see .env.example for what each does)
 //   4. npm start
-//   5. Open http://localhost:3000 — each visitor (including you) will
-//      be asked to paste their own Anthropic API key on first use.
+//   5. Open http://localhost:3000
 //
 // Requires Node.js 18+ (for the built-in global fetch).
 //
 // Deploying for real users (not just local testing) means hosting this
-// on a real server (Render, Railway, Fly.io, a VPS, etc.) with your
+// on a real server (Render, Railway, Vercel, Fly.io, etc.) with your
 // .env variables set there instead of on your own machine.
 // -------------------------------------------------------------------
 
@@ -35,6 +38,8 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 // --- Access code -----------------------------------------------------
 // If ACCESS_CODE is set, every /api/messages request must include a
@@ -51,6 +56,9 @@ const ACCESS_CODE = process.env.ACCESS_CODE || '';
 // server restarts and doesn't share state across multiple server
 // instances — fine for a single small deployment, not for a
 // multi-instance production setup (you'd want Redis or similar there).
+// This matters more now than it did with per-user keys: Gemini's free
+// tier has a shared daily request cap on YOUR key, so this protects
+// against one visitor (or a bot) using up the whole day's quota.
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '30', 10);
 const RATE_LIMIT_WINDOW_MIN = parseInt(process.env.RATE_LIMIT_WINDOW_MIN || '60', 10);
 const RATE_LIMIT_WINDOW_MS = RATE_LIMIT_WINDOW_MIN * 60 * 1000;
@@ -80,11 +88,14 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000).unref();
 
+if (!GEMINI_API_KEY) {
+  console.warn('\n⚠️  GEMINI_API_KEY is not set. Copy .env.example to .env and add a free key from https://aistudio.google.com/apikey, or AURA\'s AI replies will fail.\n');
+}
 if (!ACCESS_CODE) {
-  console.warn('\n⚠️  ACCESS_CODE is not set. The public chat endpoint is open to anyone who finds this URL, with only the rate limit protecting against abuse. Set ACCESS_CODE in .env to require a shared password.\n');
+  console.warn('\n⚠️  ACCESS_CODE is not set. The public chat endpoint is open to anyone who finds this URL, with only the rate limit protecting your daily quota. Set ACCESS_CODE in .env to require a shared password.\n');
 }
 
-app.set('trust proxy', true); // needed to get the real visitor IP behind Render/Railway/Fly's proxy
+app.set('trust proxy', true); // needed to get the real visitor IP behind Render/Railway/Vercel/Fly's proxy
 app.use(express.json({ limit: '15mb' })); // generous limit for image attachments
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -94,14 +105,80 @@ app.get('/api/config', (req, res) => {
   res.json({ accessCodeRequired: !!ACCESS_CODE });
 });
 
+// --- Anthropic-shape <-> Gemini-shape translation -----------------------
+// The front-end (public/index.html) was originally built to talk to
+// Anthropic's Messages API, and still sends requests in that shape:
+//   { model, max_tokens, system, messages: [{role:'user'|'assistant', content}], tools? }
+// where `content` is either a plain string or an array of blocks like
+//   {type:'text', text} or {type:'image', source:{type:'base64', media_type, data}}
+// Gemini's generateContent API expects a different shape:
+//   { systemInstruction, contents: [{role:'user'|'model', parts:[...]}], generationConfig, tools? }
+// where each part is {text} or {inlineData:{mimeType, data}}.
+// These two functions convert one way and back, so nothing on the
+// front-end needed to change.
+
+function anthropicContentToGeminiParts(content) {
+  if (typeof content === 'string') {
+    return [{ text: content }];
+  }
+  if (Array.isArray(content)) {
+    return content.map((block) => {
+      if (block.type === 'image' && block.source && block.source.type === 'base64') {
+        return { inlineData: { mimeType: block.source.media_type, data: block.source.data } };
+      }
+      // text blocks, and anything else unrecognized, fall back to text
+      return { text: block.text || '' };
+    });
+  }
+  return [{ text: String(content || '') }];
+}
+
+function anthropicRequestToGemini(body) {
+  const messages = Array.isArray(body.messages) ? body.messages : [];
+  const contents = messages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: anthropicContentToGeminiParts(m.content)
+  }));
+
+  const geminiBody = {
+    contents,
+    generationConfig: {
+      maxOutputTokens: body.max_tokens || 1024
+    }
+  };
+
+  if (body.system) {
+    geminiBody.systemInstruction = { parts: [{ text: body.system }] };
+  }
+
+  // The front-end asks for Anthropic's built-in web_search tool on
+  // premium requests. Gemini's equivalent is its own built-in Google
+  // Search grounding tool — map one onto the other so live web search
+  // still works instead of silently dropping the capability.
+  if (Array.isArray(body.tools) && body.tools.some((t) => t.type === 'web_search_20250305')) {
+    geminiBody.tools = [{ google_search: {} }];
+  }
+
+  return geminiBody;
+}
+
+function geminiResponseToAnthropic(geminiJson) {
+  const candidate = geminiJson && geminiJson.candidates && geminiJson.candidates[0];
+  const parts = (candidate && candidate.content && candidate.content.parts) || [];
+  const content = parts
+    .filter((p) => typeof p.text === 'string')
+    .map((p) => ({ type: 'text', text: p.text }));
+  if (content.length === 0) {
+    content.push({ type: 'text', text: '' });
+  }
+  return { content };
+}
+
 app.post('/api/messages', async (req, res) => {
-  // Each visitor supplies their own Anthropic API key, sent as a header
-  // from their own browser (never stored server-side — see public/index.html).
-  const userApiKey = req.get('x-user-api-key') || '';
-  if (!userApiKey) {
-    return res.status(400).json({
+  if (!GEMINI_API_KEY) {
+    return res.status(500).json({
       error: 'missing_api_key',
-      message: 'No Anthropic API key was provided. Enter your own API key in AURA\'s settings to use it.'
+      message: 'Server is missing GEMINI_API_KEY. Add a free key from https://aistudio.google.com/apikey as an environment variable. See .env.example.'
     });
   }
 
@@ -128,32 +205,28 @@ app.post('/api/messages', async (req, res) => {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+    const geminiBody = anthropicRequestToGemini(req.body || {});
+    const model = GEMINI_MODEL;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+
+    const upstream = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': userApiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(req.body),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiBody),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
 
     const rawText = await upstream.text();
 
-    // Rate limiting — surface this distinctly so the UI can say "try again
-    // shortly" instead of a generic failure.
     if (upstream.status === 429) {
       return res.status(429).json({
         error: 'rate_limited',
-        message: 'The AI provider is rate-limiting requests right now. Wait a moment and try again.',
+        message: 'Google\'s free Gemini tier is rate-limiting requests right now (its own daily/per-minute cap, separate from this app\'s own limit). Wait a moment and try again.',
         retryAfter: upstream.headers.get('retry-after') || null
       });
     }
 
-    // Any other non-2xx from Anthropic (bad key, bad request, server error,
-    // etc.) — try to pull their real error message out, fall back to raw text.
     if (!upstream.ok) {
       let message = rawText;
       try {
@@ -162,14 +235,13 @@ app.post('/api/messages', async (req, res) => {
       } catch (_) { /* not JSON — use raw text as-is */ }
       return res.status(upstream.status).json({
         error: 'upstream_error',
-        message: message || `Anthropic API returned status ${upstream.status}`
+        message: message || `Gemini API returned status ${upstream.status}`
       });
     }
 
-    // Success status, but confirm the body is actually valid JSON before
-    // relaying it — an unreadable "success" is worse than a clear error.
+    let geminiJson;
     try {
-      JSON.parse(rawText);
+      geminiJson = JSON.parse(rawText);
     } catch (parseErr) {
       return res.status(502).json({
         error: 'malformed_reply',
@@ -177,9 +249,8 @@ app.post('/api/messages', async (req, res) => {
       });
     }
 
-    res.status(200);
-    res.set('Content-Type', 'application/json');
-    res.send(rawText);
+    const anthropicShaped = geminiResponseToAnthropic(geminiJson);
+    res.status(200).json(anthropicShaped);
 
   } catch (err) {
     clearTimeout(timeoutId);
@@ -192,7 +263,7 @@ app.post('/api/messages', async (req, res) => {
     console.error('Proxy error:', err);
     res.status(502).json({
       error: 'network_error',
-      message: 'Failed to reach the Anthropic API.',
+      message: 'Failed to reach the Gemini API.',
       detail: String(err)
     });
   }

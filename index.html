@@ -1558,7 +1558,7 @@ async function sendMessage(text){
     if(placeholder) placeholder.remove();
     const failedStep = e.auraStep || step;
     const READABLE_ERRORS = {
-      missing_api_key: "AURA can't reach its AI backend because the server is missing its API key. Whoever's running this needs to add ANTHROPIC_API_KEY (as a Replit Secret or in .env).",
+      missing_api_key: e.message || "AURA needs your Anthropic API key. Tap the gear icon, then \"Change my Anthropic API key\" in About, to enter one.",
       timeout: "That request took too long and timed out. The AI provider may be slow right now — try again in a moment.",
       rate_limited: "AURA is being rate-limited by the AI provider right now. Wait a few seconds and try again.",
       malformed_reply: "AURA got back an unreadable response from the AI provider. This is usually temporary — try again.",

@@ -135,7 +135,15 @@ header .status b{color:var(--teal);font-weight:600;}
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:6px 0 2px;
 }
-.core-wrap{position:relative;width:190px;height:190px;}
+.core-wrap{position:relative;width:190px;height:190px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+@keyframes coreTapPulse{
+  0%{transform:scale(1);}
+  35%{transform:scale(0.95);}
+  65%{transform:scale(1.05);}
+  100%{transform:scale(1);}
+}
+.core-wrap.tap-pulse{animation:coreTapPulse 0.45s ease;}
+.core-wrap.tap-pulse .core-holo{filter:blur(6px) brightness(1.5);}
 .core-wrap svg{position:absolute;inset:0;width:100%;height:100%;}
 .ring1{animation:spin 14s linear infinite;}
 .ring2{animation:spin 20s linear infinite reverse;}
@@ -1619,6 +1627,16 @@ if(SR){
 micBtn.addEventListener('click', ()=>{
   if(!SR){ textInput.focus(); hint.textContent='Voice not supported here — type instead.'; return; }
   if(recognizing){ recognition.stop(); } else { recognition.start(); }
+});
+
+// Tapping the central orb does the same thing as tapping the mic button —
+// a nice, discoverable "touch AURA to talk" interaction — with a quick
+// pulse animation on the orb itself for tactile feedback.
+coreWrap.addEventListener('click', ()=>{
+  coreWrap.classList.remove('tap-pulse');
+  void coreWrap.offsetWidth; // restart the CSS animation even on repeated taps
+  coreWrap.classList.add('tap-pulse');
+  micBtn.click();
 });
 
 // ---------------- Casual-inspection deterrent ----------------

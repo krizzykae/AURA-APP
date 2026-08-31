@@ -116,6 +116,27 @@ app.get('/api/whoami', (req, res) => {
   res.type('text/plain').send('AURA gemini-backend build — ' + new Date().toISOString());
 });
 
+// Diagnostic-only endpoint: lists exactly what files this running server
+// actually sees on disk, to debug "webapp folder not found" style issues
+// without needing shell/SSH access to the host.
+app.get('/api/debug-files', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const fs = require('fs');
+  try {
+    const rootFiles = fs.readdirSync(__dirname);
+    let webappFiles = null;
+    let webappError = null;
+    try {
+      webappFiles = fs.readdirSync(path.join(__dirname, 'webapp'));
+    } catch (e) {
+      webappError = String(e);
+    }
+    res.json({ __dirname, rootFiles, webappFiles, webappError });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 // Lets the public page know whether it needs to show an access-code
 // prompt at all — never reveals the actual code.
 app.get('/api/config', (req, res) => {
